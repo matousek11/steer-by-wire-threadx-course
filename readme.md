@@ -6,6 +6,7 @@ requirements:
   - quality of regulator: no oscillations, fast response, minimal steady state error
   - should not be affected by FTP file transfer or http server
 - set point for motor position should be possible to set through UDP
+  - message format: non-clamped degrees value
 
 # Web server
 A website that displays charts generated from board data.

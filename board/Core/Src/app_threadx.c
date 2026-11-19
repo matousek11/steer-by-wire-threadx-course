@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main.h"
+#include "motor_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,7 +36,9 @@
 /* USER CODE BEGIN PD */
 #define TRACEX_BUFFER_SIZE		64000
 #define LED_THREAD_STACK_SIZE	4096
+#define TEST_MOTOR_DRIVER_STACK_SIZE 4096
 #define LED_THREAD_PRIORITY		10
+#define TEST_MOTOR_DRIVER_PRIORITY 10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,11 +51,13 @@
 uint8_t tracex_buffer[TRACEX_BUFFER_SIZE];
 
 TX_THREAD led_thread;
+TX_THREAD test_motor_driver_thread;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 void led_thread_entry(ULONG init);
+void test_motor_driver(ULONG init);
 /* USER CODE END PFP */
 
 /**
@@ -66,26 +71,47 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   TX_BYTE_POOL *bytePool = (TX_BYTE_POOL *) memory_ptr;
   VOID *pointer;
+  VOID *test_motor_pointer;
 
   // stack allocation for LED thread
   ret = tx_byte_allocate(bytePool, &pointer, LED_THREAD_STACK_SIZE, TX_NO_WAIT);
 
   if (ret != TX_SUCCESS)
+  {
     return ret;
+  }
 
+  ret = tx_byte_allocate(bytePool, &test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TX_NO_WAIT);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
 
   // LED thread create
   ret = tx_thread_create(&led_thread, "LED thread", led_thread_entry, 1234,
 	  pointer, LED_THREAD_STACK_SIZE, LED_THREAD_PRIORITY, LED_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
+  {
     return ret;
+  }
 
+  // Test motor thread
+  ret = tx_thread_create(&test_motor_driver_thread, "Motor driver thread test", test_motor_driver, 0, 
+    test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TEST_MOTOR_DRIVER_PRIORITY, TEST_MOTOR_DRIVER_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
 
   /* USER CODE END App_ThreadX_MEM_POOL */
 
   /* USER CODE BEGIN App_ThreadX_Init */
   tx_trace_enable(&tracex_buffer, TRACEX_BUFFER_SIZE, 30);
+
+  motor_driver_initialize();
   /* USER CODE END App_ThreadX_Init */
 
   return ret;
@@ -110,6 +136,11 @@ void MX_ThreadX_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+void test_motor_driver(ULONG init)
+{
+  motor_driver_self_test();
+}
 
 void led_thread_entry(ULONG init)
 {

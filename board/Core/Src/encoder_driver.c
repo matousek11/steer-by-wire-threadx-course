@@ -7,12 +7,7 @@
 
 #include "encoder_driver.h"
 
-#define ENCODER_STEPS 32 //TODO find real count
-
-/* TODO:
- * wait time / options
- * mutex only for write / never ?
- * */
+#define ENCODER_STEPS 256
 
 UINT encoder_driver_initialize()
 {
@@ -62,4 +57,5 @@ UINT encoder_driver_set_degrees(uint32_t position)
 UINT encoder_driver_home()
 {
 	TIM4->CNT = 0;
+	return TX_SUCCESS;
 }

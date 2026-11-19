@@ -89,7 +89,9 @@ void Error_Handler(void);
 #define SW1_EXTI_IRQn EXTI9_5_IRQn
 
 /* USER CODE BEGIN Private defines */
-
+//use this define to set this board as sender,
+// remove it to set this board as receiver
+#define IS_SENDER_BOARD 1
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

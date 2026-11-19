@@ -71,3 +71,18 @@ UINT motor_driver_terminate(VOID)
 
     return TX_SUCCESS;
 }
+
+VOID motor_driver_self_test(VOID)
+{
+    printf("Motor driver self test\n");
+    printf("Rotating to positive side\n");
+    motor_driver_output(100);
+    tx_thread_sleep(150); // 1,5s
+
+    printf("Rotating to negative side\n");
+    motor_driver_output(-100);
+    tx_thread_sleep(150); // 1,5s
+    motor_driver_output(0);
+    printf("Motor driver self test finished\n");
+}
+

@@ -49,4 +49,12 @@ UINT motor_driver_status(INT *pwm);
 */
 UINT motor_driver_terminate(VOID);
 
+/**
+* @brief  Moves the motor in both directions to test everything is working.
+*
+* Runs for 3 seconds.
+* Can be called only from thread.
+*/
+VOID test_motor_driver(VOID);
+
 #endif

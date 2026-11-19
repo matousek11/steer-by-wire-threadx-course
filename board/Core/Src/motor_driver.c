@@ -85,4 +85,3 @@ VOID motor_driver_self_test(VOID)
     motor_driver_output(0);
     printf("Motor driver self test finished\n");
 }
-

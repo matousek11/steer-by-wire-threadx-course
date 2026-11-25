@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "udp_link.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -261,7 +261,7 @@ static void MX_ETH_Init(void)
   heth.Init.RxBuffLen = 1536;
 
   /* USER CODE BEGIN MACADDRESS */
-
+  MACAddr[5] = UDP_LINK_SOURCE_MAC;
   /* USER CODE END MACADDRESS */
 
   if (HAL_ETH_Init(&heth) != HAL_OK)

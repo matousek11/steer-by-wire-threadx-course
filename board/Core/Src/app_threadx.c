@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "main.h"
 #include "motor_driver.h"
+#include "control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,6 +40,8 @@
 #define TEST_MOTOR_DRIVER_STACK_SIZE 4096
 #define LED_THREAD_PRIORITY		10
 #define TEST_MOTOR_DRIVER_PRIORITY 10
+#define CONTROL_THREAD_STACK_SIZE	4096
+#define CONTROL_THREAD_PRIORITY		5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,6 +55,7 @@ uint8_t tracex_buffer[TRACEX_BUFFER_SIZE];
 
 TX_THREAD led_thread;
 TX_THREAD test_motor_driver_thread;
+TX_THREAD control_thread;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,6 +76,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   TX_BYTE_POOL *bytePool = (TX_BYTE_POOL *) memory_ptr;
   VOID *pointer;
   VOID *test_motor_pointer;
+  VOID *control_pointer;
 
   // stack allocation for LED thread
   ret = tx_byte_allocate(bytePool, &pointer, LED_THREAD_STACK_SIZE, TX_NO_WAIT);
@@ -100,6 +105,23 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   // Test motor thread
   ret = tx_thread_create(&test_motor_driver_thread, "Motor driver thread test", test_motor_driver, 0, 
     test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TEST_MOTOR_DRIVER_PRIORITY, TEST_MOTOR_DRIVER_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
+
+  // stack allocation for control thread
+  ret = tx_byte_allocate(bytePool, &control_pointer, CONTROL_THREAD_STACK_SIZE, TX_NO_WAIT);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
+
+  // Control thread create
+  ret = tx_thread_create(&control_thread, "Control thread", control_thread_entry, 0,
+    control_pointer, CONTROL_THREAD_STACK_SIZE, CONTROL_THREAD_PRIORITY, CONTROL_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
   {

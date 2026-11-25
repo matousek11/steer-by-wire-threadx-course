@@ -27,6 +27,7 @@
 #include "nxd_ftp_server.h"
 #include "nx_web_http_server.h"
 #include "main.h"
+#include "udp_link.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -52,7 +53,6 @@ NX_PACKET_POOL NxAppPool;
 NX_IP          NetXDuoEthIpInstance;
 /* USER CODE BEGIN PV */
 TX_THREAD ipLinkCheckThread;
-NX_UDP_SOCKET UDPSocket;
 NX_FTP_SERVER ftpServer;
 CHAR *ftpServerStack;
 
@@ -143,7 +143,12 @@ UINT MX_NetXDuo_Init(VOID *memory_ptr)
   /* Enable the ARP protocol and provide the ARP cache size for the IP instance */
 
   /* USER CODE BEGIN ARP_Protocol_Initialization */
+  ret = nx_ip_address_set(&NetXDuoEthIpInstance, UDP_LINK_SOURCE_IP_ADDRESS, NX_APP_DEFAULT_NET_MASK);
 
+  if (ret != NX_SUCCESS)
+  {
+    return NX_NOT_SUCCESSFUL;
+  }
   /* USER CODE END ARP_Protocol_Initialization */
 
   ret = nx_arp_enable(&NetXDuoEthIpInstance, (VOID *)pointer, DEFAULT_ARP_CACHE_SIZE);
@@ -253,13 +258,7 @@ static VOID nx_app_thread_entry (ULONG thread_input)
   /* USER CODE BEGIN Nx_App_Thread_Entry 0 */
 
 	UINT ret;
-	ULONG bytes_read;
-	UCHAR data_buffer[128];
-	NX_PACKET *incoming_packet;
-	NX_PACKET *outcoming_packet;
-	ULONG ipAddress;
-	UINT port;
-
+	
 	// waiting for SD card mount and then start the FTP server
 	ret = tx_semaphore_get(&sdMountDone, TX_WAIT_FOREVER);
 	if (ret == TX_SUCCESS)
@@ -296,92 +295,6 @@ static VOID nx_app_thread_entry (ULONG thread_input)
 		if (nx_web_http_server_start(&httpServer) == NX_SUCCESS)
 		{
 			printf("HTTP server started.\n");
-		}
-	}
-
-	// create UDP socket
-	ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &UDPSocket, "UDP Server Socket", NX_IP_NORMAL, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, 2);
-	if (ret != NX_SUCCESS)
-	{
-		printf("UDP server create error. %02X\n", ret);
-		while(1)
-		{
-			tx_thread_sleep(100);
-		}
-	}
-
-	// bind the socket to the port 5000 - this is the nucleo board local port
-	ret = nx_udp_socket_bind(&UDPSocket, 5000, TX_WAIT_FOREVER);
-	if (ret != NX_SUCCESS)
-	{
-		printf("Binding error. %02X\n", ret);
-		while(1)
-		{
-			tx_thread_sleep(100);
-		}
-	}
-	else
-	{
-		printf("UDP Server listening on PORT 5000.\n");
-	}
-
-	// start the loop
-	while (1)
-	{
-		// wait for one second or until the UDP is received
-		ret = nx_udp_socket_receive(&UDPSocket, &incoming_packet, 100);
-
-		if (ret == NX_SUCCESS)
-		{
-			// if packet has been successfully received, then retrieved the data into local buffer
-			ret = nx_packet_data_retrieve(incoming_packet, data_buffer, &bytes_read);
-
-			if (ret == NX_SUCCESS)
-			{
-				// get the source IP address and port
-				nx_udp_source_extract(incoming_packet, &ipAddress, &port);
-				printf("Socket received %d bytes from %d.%d.%d.%d:%d\n",
-						(int) bytes_read, (int) (ipAddress >> 24) & 0xFF, (int) (ipAddress >> 16) & 0xFF,
-						(int) (ipAddress >> 8) & 0xFF, (int) ipAddress & 0xFF, port);
-
-				// allocate packet for reply
-				ret = nx_packet_allocate(&NxAppPool, &outcoming_packet, NX_UDP_PACKET, 100);
-				if (ret != NX_SUCCESS)
-				{
-					// if error has been detected, print the error code and jump to the beginning of the while loop commands
-					printf("Packet allocate error %02x\n", ret);
-					continue;
-				}
-
-				// append data to the packet
-				ret = nx_packet_data_append(outcoming_packet, data_buffer,
-						bytes_read, &NxAppPool, 100);
-
-				if (ret != NX_SUCCESS)
-				{
-					// if error has been detected, print the error code and jump to the beginning of the while loop commands
-					printf("Packet append error %02x\n", ret);
-					continue;
-				}
-
-				// send the data to the IP address and port which has been extracted from the incoming packet
-				ret = nx_udp_socket_send(&UDPSocket, outcoming_packet,	ipAddress, port);
-				if (ret != NX_SUCCESS)
-				{
-					// in the case of socket send failure we MUST release the outcoming packet!
-					printf("UDP send error %02x\n", ret);
-					nx_packet_release(outcoming_packet);
-				}
-				else
-				{
-					// in the case of socket success we MUST NOT release the outcoming packet!
-					printf("UDP send successfully\n");
-				}
-			}
-
-			// we MUST always release the incoming packet
-			nx_packet_release(incoming_packet);
-			printf("Packets available %d\n\n", (int) NxAppPool.nx_packet_pool_available);
 		}
 	}
 

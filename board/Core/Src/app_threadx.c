@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "main.h"
 #include "motor_driver.h"
+#include "comm_manager.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,10 +36,10 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define TRACEX_BUFFER_SIZE		64000
-#define LED_THREAD_STACK_SIZE	4096
 #define TEST_MOTOR_DRIVER_STACK_SIZE 4096
-#define LED_THREAD_PRIORITY		10
 #define TEST_MOTOR_DRIVER_PRIORITY 10
+#define COMM_MANAGER_THREAD_STACK_SIZE	4096
+#define COMM_MANAGER_THREAD_PRIORITY		5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,13 +51,12 @@
 /* USER CODE BEGIN PV */
 uint8_t tracex_buffer[TRACEX_BUFFER_SIZE];
 
-TX_THREAD led_thread;
 TX_THREAD test_motor_driver_thread;
+TX_THREAD comm_manager_thread;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
-void led_thread_entry(ULONG init);
 void test_motor_driver(ULONG init);
 /* USER CODE END PFP */
 
@@ -70,27 +70,10 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   UINT ret = TX_SUCCESS;
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   TX_BYTE_POOL *bytePool = (TX_BYTE_POOL *) memory_ptr;
-  VOID *pointer;
   VOID *test_motor_pointer;
-
-  // stack allocation for LED thread
-  ret = tx_byte_allocate(bytePool, &pointer, LED_THREAD_STACK_SIZE, TX_NO_WAIT);
-
-  if (ret != TX_SUCCESS)
-  {
-    return ret;
-  }
+  VOID *comm_manager_pointer;
 
   ret = tx_byte_allocate(bytePool, &test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TX_NO_WAIT);
-
-  if (ret != TX_SUCCESS)
-  {
-    return ret;
-  }
-
-  // LED thread create
-  ret = tx_thread_create(&led_thread, "LED thread", led_thread_entry, 1234,
-	  pointer, LED_THREAD_STACK_SIZE, LED_THREAD_PRIORITY, LED_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
   {
@@ -100,6 +83,23 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   // Test motor thread
   ret = tx_thread_create(&test_motor_driver_thread, "Motor driver thread test", test_motor_driver, 0, 
     test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TEST_MOTOR_DRIVER_PRIORITY, TEST_MOTOR_DRIVER_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
+
+  // stack allocation for comm manager thread
+  ret = tx_byte_allocate(bytePool, &comm_manager_pointer, COMM_MANAGER_THREAD_STACK_SIZE, TX_NO_WAIT);
+
+  if (ret != TX_SUCCESS)
+  {
+    return ret;
+  }
+
+  // Comm manager thread create
+  ret = tx_thread_create(&comm_manager_thread, "Comm manager thread", comm_manager_thread_entry, 0,
+    comm_manager_pointer, COMM_MANAGER_THREAD_STACK_SIZE, COMM_MANAGER_THREAD_PRIORITY, COMM_MANAGER_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
   {
@@ -140,15 +140,6 @@ void MX_ThreadX_Init(void)
 void test_motor_driver(ULONG init)
 {
   motor_driver_self_test();
-}
-
-void led_thread_entry(ULONG init)
-{
-	while(1)
-	{
-
-		tx_thread_sleep(20);
-	}
 }
 
 /* USER CODE END 1 */

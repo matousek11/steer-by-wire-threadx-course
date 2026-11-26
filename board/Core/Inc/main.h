@@ -90,8 +90,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 //use this define to set this board as sender,
-// remove it to set this board as receiver
+// change it to 0 to set this board as receiver
 #define IS_SENDER_BOARD 1
+
+#ifndef IS_SENDER_BOARD
+#error "IS_SENDER_BOARD is not defined, set it in main.h (1 = sender, 0 = receiver)"
+#elif (IS_SENDER_BOARD != 0) && (IS_SENDER_BOARD != 1)
+#error "IS_SENDER_BOARD must be 0 or 1"
+#endif
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

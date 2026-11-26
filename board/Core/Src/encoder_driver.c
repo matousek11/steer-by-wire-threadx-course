@@ -21,7 +21,7 @@ UINT encoder_driver_get_native(uint32_t *position)
 		return TX_PTR_ERROR;
 	}
 
-	*position = TIM4->CNT;
+	*position = TIM1->CNT;
 	return TX_SUCCESS;
 }
 
@@ -42,7 +42,7 @@ UINT encoder_driver_get_degrees(uint32_t *position)
 
 UINT encoder_driver_set_native(uint32_t position)
 {
-	TIM4->CNT = position;
+	TIM1->CNT = position;
 	return TX_SUCCESS;
 }
 
@@ -56,6 +56,6 @@ UINT encoder_driver_set_degrees(uint32_t position)
 
 UINT encoder_driver_home()
 {
-	TIM4->CNT = 0;
+	TIM1->CNT = 0;
 	return TX_SUCCESS;
 }

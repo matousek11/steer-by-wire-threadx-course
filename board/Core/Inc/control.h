@@ -1,7 +1,7 @@
 /**
  * @file   control.h
  * @brief  Control thread: the sender board reads the encoder and sends its
- *         heading, the receiver board receives the requested heading.
+ *         angle, the receiver board receives the requested angle.
  *         The role is selected by IS_SENDER_BOARD in main.h.
  */
 

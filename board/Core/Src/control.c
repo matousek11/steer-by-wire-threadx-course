@@ -13,10 +13,10 @@ VOID control_thread_entry(ULONG input)
     ULONG now;
     ULONG loop_start;
 #if IS_SENDER_BOARD
-    uint32_t heading;
+    uint32_t angle;
 #else
-    /* last valid heading, kept when nothing new arrives */
-    INT requested_heading = 0;
+    /* last valid angle, kept when nothing new arrives */
+    INT requested_angle = 0;
 #endif
 
     TX_PARAMETER_NOT_USED(input);
@@ -45,13 +45,13 @@ VOID control_thread_entry(ULONG input)
         loop_start = tx_time_get();
 
 #if IS_SENDER_BOARD
-        ret = encoder_driver_get_degrees(&heading);
+        ret = encoder_driver_get_degrees(&angle);
         if (ret == TX_SUCCESS)
         {
-            ret = udp_link_send_heading((INT) heading);
+            ret = udp_link_send_angle((INT) angle);
             if (ret != NX_SUCCESS)
             {
-                printf("Failed to send heading\n");
+                printf("Failed to send angle\n");
             }
         }
         else
@@ -59,15 +59,15 @@ VOID control_thread_entry(ULONG input)
             printf("Failed to read encoder\n");
         }
 #else
-        ret = udp_link_receive_heading(&requested_heading);
+        ret = udp_link_receive_angle(&requested_angle);
         if (ret == NX_SUCCESS)
         {
-            /* New requested heading is in requested_heading (PID goes here later). */
+            /* New requested angle is in requested_angle (PID goes here later). */
         }
         else if (ret != NX_NO_PACKET)
         {
             /* NX_NO_PACKET only means nothing new arrived; anything else is an error. */
-            printf("Failed to receive heading\n");
+            printf("Failed to receive angle\n");
         }
 #endif
 

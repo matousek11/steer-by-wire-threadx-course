@@ -1,17 +1,14 @@
 #include "udp_link.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <errno.h>
 
-/* Heading is sent as ASCII text, e.g. "-30" or "725".*/
-#define UDP_LINK_MESSAGE_SIZE  12
+/* Angle is sent as the raw bytes of an INT (4 bytes). */
+#define UDP_LINK_MESSAGE_SIZE  sizeof(INT)
 
 extern NX_IP           NetXDuoEthIpInstance;
 extern NX_PACKET_POOL  NxAppPool;
 
 static NX_UDP_SOCKET  udp_link_socket;
-static UINT           udp_link_initialized;
+static UINT           udp_link_initialized = TX_FALSE;
 
 UINT udp_link_initialize(VOID)
 {
@@ -23,7 +20,7 @@ UINT udp_link_initialize(VOID)
     }
 
     /* Queue depth 1: when a new datagram arrives, the older one is dropped,
-       so the socket always holds only the latest heading. */
+       so the socket always holds only the latest angle. */
     ret = nx_udp_socket_create(&NetXDuoEthIpInstance, &udp_link_socket, "UDP link socket",
                                NX_IP_MIN_DELAY, NX_FRAGMENT_OKAY, NX_IP_TIME_TO_LIVE, 1);
     if (ret != NX_SUCCESS)
@@ -44,19 +41,15 @@ UINT udp_link_initialize(VOID)
     return NX_SUCCESS;
 }
 
-UINT udp_link_send_heading(INT heading)
+UINT udp_link_send_angle(INT angle)
 {
     UINT       ret;
     NX_PACKET *packet;
-    CHAR       message[UDP_LINK_MESSAGE_SIZE];
-    int        byte_length;
 
     if (udp_link_initialized != TX_TRUE)
     {
         return NX_NOT_CREATED;
     }
-
-    byte_length = snprintf(message, sizeof(message), "%d", (int) heading);
 
     ret = nx_packet_allocate(&NxAppPool, &packet, NX_UDP_PACKET, NX_NO_WAIT);
     if (ret != NX_SUCCESS)
@@ -64,7 +57,8 @@ UINT udp_link_send_heading(INT heading)
         return ret;
     }
 
-    ret = nx_packet_data_append(packet, message, (ULONG) byte_length, &NxAppPool, NX_NO_WAIT);
+    /* Copy the bytes of the variable as they lie in memory. */
+    ret = nx_packet_data_append(packet, &angle, UDP_LINK_MESSAGE_SIZE, &NxAppPool, NX_NO_WAIT);
     if (ret != NX_SUCCESS)
     {
         /* The packet is still ours, give it back to the pool. */
@@ -82,21 +76,19 @@ UINT udp_link_send_heading(INT heading)
 
     /* Success: the packet now belongs to NetX, do not touch or release it. */
 
-    printf("sending angle %d\n", (int) heading);
+    printf("sending angle %d\n", (int) angle);
 
     return NX_SUCCESS;
 }
 
-UINT udp_link_receive_heading(INT *heading)
+UINT udp_link_receive_angle(INT *angle)
 {
     UINT       ret;
     NX_PACKET *packet;
-    CHAR       message[UDP_LINK_MESSAGE_SIZE];
     ULONG      length;
-    CHAR      *end;
-    long       value;
+    INT        value;
 
-    if (heading == NX_NULL)
+    if (angle == NX_NULL)
     {
         return NX_PTR_ERROR;
     }
@@ -112,15 +104,13 @@ UINT udp_link_receive_heading(INT *heading)
         return ret;
     }
 
-    /* message that does not fit the buffer (with room for '\0') cannot be a valid heading. */
-    if (packet->nx_packet_length >= sizeof(message))
+    if (packet->nx_packet_length != UDP_LINK_MESSAGE_SIZE)
     {
         nx_packet_release(packet);
         return NX_INVALID_PACKET;
     }
 
-    /* Copies at most sizeof(message) - 1 bytes, so the buffer cannot overflow. */
-    ret = nx_packet_data_extract_offset(packet, 0, message, sizeof(message) - 1, &length);
+    ret = nx_packet_data_extract_offset(packet, 0, &value, sizeof(value), &length);
 
     nx_packet_release(packet);
 
@@ -129,25 +119,12 @@ UINT udp_link_receive_heading(INT *heading)
         return ret;
     }
 
-    message[length] = '\0';
-
-    /* text to number */
-    errno = 0;
-    value = strtol(message, &end, 10);
-
-    /* Reject: no digits at all (end did not move) or out of INT range. */
-    if ((end == message) || (errno == ERANGE))
+    if (length != UDP_LINK_MESSAGE_SIZE)
     {
         return NX_INVALID_PACKET;
     }
 
-    /* Reject garbage after the number, e.g. "72x". */
-    if (*end != '\0')
-    {
-        return NX_INVALID_PACKET;
-    }
-
-    *heading = (INT) value;
+    *angle = value;
 
     printf("received angle %d\n", (int) value);
 

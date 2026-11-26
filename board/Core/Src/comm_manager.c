@@ -1,12 +1,12 @@
-#include "control.h"
+#include "comm_manager.h"
 #include "udp_link.h"
 #include "encoder_driver.h"
 #include <stdio.h>
 
 /* Loop period in ThreadX ticks (1 tick = 10 ms, 100 ticks = 1 s). */
-#define CONTROL_LOOP_PERIOD         5
+#define COMM_MANAGER_LOOP_PERIOD         5
 
-VOID control_thread_entry(ULONG input)
+VOID comm_manager_thread_entry(ULONG input)
 {
     UINT  ret;
     ULONG next_wakeup;
@@ -73,7 +73,7 @@ VOID control_thread_entry(ULONG input)
 
         /* Fixed period: wake up at a planned moment, not "period after the work",
            so the time spent above does not stretch the loop. */
-        next_wakeup += CONTROL_LOOP_PERIOD;
+        next_wakeup += COMM_MANAGER_LOOP_PERIOD;
         now = tx_time_get();
 
         if ((LONG) (next_wakeup - now) > 0)
@@ -83,7 +83,7 @@ VOID control_thread_entry(ULONG input)
         else
         {
             /* The work took longer than one period: start counting again from now. */
-            printf("Work in control loop took longer than expected: %lu ticks\n", now - loop_start);
+            printf("Work in comm manager loop took longer than expected: %lu ticks\n", now - loop_start);
             next_wakeup = now;
         }
     }

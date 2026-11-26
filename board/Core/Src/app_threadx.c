@@ -25,7 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "main.h"
 #include "motor_driver.h"
-#include "control.h"
+#include "comm_manager.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,8 +38,8 @@
 #define TRACEX_BUFFER_SIZE		64000
 #define TEST_MOTOR_DRIVER_STACK_SIZE 4096
 #define TEST_MOTOR_DRIVER_PRIORITY 10
-#define CONTROL_THREAD_STACK_SIZE	4096
-#define CONTROL_THREAD_PRIORITY		5
+#define COMM_MANAGER_THREAD_STACK_SIZE	4096
+#define COMM_MANAGER_THREAD_PRIORITY		5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -52,7 +52,7 @@
 uint8_t tracex_buffer[TRACEX_BUFFER_SIZE];
 
 TX_THREAD test_motor_driver_thread;
-TX_THREAD control_thread;
+TX_THREAD comm_manager_thread;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,7 +71,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
   TX_BYTE_POOL *bytePool = (TX_BYTE_POOL *) memory_ptr;
   VOID *test_motor_pointer;
-  VOID *control_pointer;
+  VOID *comm_manager_pointer;
 
   ret = tx_byte_allocate(bytePool, &test_motor_pointer, TEST_MOTOR_DRIVER_STACK_SIZE, TX_NO_WAIT);
 
@@ -89,17 +89,17 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
     return ret;
   }
 
-  // stack allocation for control thread
-  ret = tx_byte_allocate(bytePool, &control_pointer, CONTROL_THREAD_STACK_SIZE, TX_NO_WAIT);
+  // stack allocation for comm manager thread
+  ret = tx_byte_allocate(bytePool, &comm_manager_pointer, COMM_MANAGER_THREAD_STACK_SIZE, TX_NO_WAIT);
 
   if (ret != TX_SUCCESS)
   {
     return ret;
   }
 
-  // Control thread create
-  ret = tx_thread_create(&control_thread, "Control thread", control_thread_entry, 0,
-    control_pointer, CONTROL_THREAD_STACK_SIZE, CONTROL_THREAD_PRIORITY, CONTROL_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
+  // Comm manager thread create
+  ret = tx_thread_create(&comm_manager_thread, "Comm manager thread", comm_manager_thread_entry, 0,
+    comm_manager_pointer, COMM_MANAGER_THREAD_STACK_SIZE, COMM_MANAGER_THREAD_PRIORITY, COMM_MANAGER_THREAD_PRIORITY, TX_NO_TIME_SLICE, TX_AUTO_START);
 
   if (ret != TX_SUCCESS)
   {
